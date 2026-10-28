@@ -1,0 +1,9 @@
+# downloaded by setup_toolkit.py
+toolkit/
+
+# generated
+design_space.json
+__pycache__/
+*.pyc
+
+.DS_Store

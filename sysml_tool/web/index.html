@@ -1,0 +1,149 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>SysML Konfigurator</title>
+  <link rel="icon" href="data:,">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <span class="logo" aria-hidden="true">◇</span>
+      <div>
+        <h1>SysML Konfigurator</h1>
+        <p class="subtitle" id="subtitle">Modell wird geladen …</p>
+      </div>
+    </div>
+    <nav class="tabs" role="tablist">
+      <button role="tab" class="tab active" data-view="configure" aria-selected="true">Konfigurieren</button>
+      <button role="tab" class="tab" data-view="explore" aria-selected="false">Lösungsraum</button>
+      <button role="tab" class="tab" data-view="model" aria-selected="false">Modell</button>
+    </nav>
+    <div class="topbar-actions">
+      <select id="productLineSelect" class="hidden" aria-label="Produktlinie"></select>
+      <button id="reloadButton" class="btn ghost" title="Modelldateien neu einlesen, z. B. nach Änderungen">Modell neu laden</button>
+    </div>
+  </header>
+
+  <div id="errorBanner" class="banner hidden" role="alert"></div>
+
+  <main id="configureView" class="view">
+    <section class="main-col">
+      <div class="toolbar">
+        <label class="field">
+          <span>Ausgangspunkt</span>
+          <select id="presetSelect"></select>
+        </label>
+        <p class="hint">Wähle pro Variationspunkt eine Variante. Jede Auswahl wird mit <code>sysmlv2 verify</code> gegen die Regeln und Anforderungen des Modells geprüft.</p>
+      </div>
+      <div id="variationPoints"></div>
+    </section>
+
+    <aside class="side-col">
+      <div class="sticky">
+        <section id="statusCard" class="card status unknown">
+          <div class="status-head">
+            <span class="status-icon" id="statusIcon">…</span>
+            <div>
+              <div class="status-title" id="statusTitle">Wird geprüft</div>
+              <div class="status-sub" id="statusSub"></div>
+            </div>
+          </div>
+          <dl class="figures" id="figures"></dl>
+        </section>
+
+        <section class="card">
+          <h2>Regeln <span class="count" id="rulesCount"></span></h2>
+          <ul class="checklist" id="rulesList"></ul>
+        </section>
+
+        <section class="card">
+          <h2>Anforderungen</h2>
+          <ul class="checklist" id="requirementsList"></ul>
+        </section>
+
+        <section class="card">
+          <h2>Als SysML übernehmen</h2>
+          <div class="snippet-row">
+            <input id="snippetName" value="meineKonfiguration" aria-label="Name der Konfiguration" spellcheck="false">
+            <button id="copyButton" class="btn">Kopieren</button>
+          </div>
+          <pre class="snippet" id="snippet"></pre>
+        </section>
+      </div>
+    </aside>
+  </main>
+
+  <main id="exploreView" class="view hidden">
+    <div class="explore-bar">
+      <div class="axis-pickers" id="axisPickers"></div>
+      <div class="segmented" id="viewButtons" role="group" aria-label="Ansicht">
+        <button type="button" data-plot="3d" class="active">3D</button>
+        <button type="button" data-plot="xy">X · Y</button>
+        <button type="button" data-plot="xz">X · Z</button>
+        <button type="button" data-plot="yz">Y · Z</button>
+      </div>
+      <label class="check"><input type="checkbox" id="showInvalid" checked> unzulässige zeigen</label>
+    </div>
+
+    <div class="explore-grid">
+      <section class="card plot-card">
+        <div class="plot-head">
+          <div class="legend" id="legend">
+            <span><i class="sw valid"></i>zulässig</span>
+            <span><i class="sw invalid"></i>nicht zulässig</span>
+            <span><i class="sw pareto"></i><span id="paretoLegend">Pareto-optimal</span></span>
+            <span><i class="sw current"></i>aktuelle Konfiguration</span>
+          </div>
+          <span class="plot-hint" id="plotHint">Ziehen: drehen · Mausrad: zoomen · Doppelklick: Ansicht zurücksetzen</span>
+        </div>
+        <div class="plot-wrap" id="plotWrap">
+          <canvas id="plot" aria-label="Lösungsraum als Punktwolke"></canvas>
+          <div class="plot-empty hidden" id="plotEmpty"></div>
+          <div class="tooltip hidden" id="tooltip" role="tooltip"></div>
+        </div>
+      </section>
+
+      <aside class="explore-side">
+        <section class="card">
+          <h2>Stichprobe</h2>
+          <div class="sample-stats" id="sampleStats"></div>
+          <div class="progress hidden" id="progress"><div class="progress-bar" id="progressBar"></div></div>
+          <div class="sample-buttons">
+            <button type="button" class="btn" id="sampleRandom" title="Gleichverteilt über alle vollständigen Auswahlen">+ 500 zufällig</button>
+            <button type="button" class="btn" id="sampleNeighbors" title="Ändert 1–2 Variationspunkte zulässiger Konfigurationen">+ 500 um zulässige</button>
+            <button type="button" class="btn" id="sampleAll"></button>
+            <button type="button" class="btn ghost hidden" id="sampleStop">Stopp</button>
+          </div>
+          <p class="note"><b>Zufällig</b> zieht gleichverteilt aus allen vollständigen Auswahlen und zeigt, wie groß der zulässige Anteil ist.
+            <b>Um zulässige</b> ändert 1–2 Variationspunkte bereits zulässiger Konfigurationen. So findet man schneller weitere zulässige, die Stichprobe ist dann aber nicht mehr gleichverteilt.
+            Jeder Punkt wird mit <code>sysmlv2 verify</code> geprüft.</p>
+        </section>
+
+        <section class="card" id="pointCard">
+          <h2>Ausgewählter Punkt</h2>
+          <div id="pointDetails"><p class="muted">Klicke einen Punkt an, um seine Konfiguration zu sehen.</p></div>
+        </section>
+      </aside>
+    </div>
+
+    <section class="table-wrap">
+      <div class="tbl-caption">
+        <h3>Pareto-optimale Konfigurationen</h3>
+        <span class="muted" id="paretoCaption"></span>
+        <button type="button" class="btn ghost csv" id="csvButton">CSV aller Punkte</button>
+      </div>
+      <div class="pareto-scroll"><table id="paretoTable"></table></div>
+    </section>
+  </main>
+
+  <main id="modelView" class="view hidden">
+    <div id="modelContent" class="model-content"></div>
+  </main>
+
+  <script src="app.js"></script>
+  <script src="explore.js"></script>
+</body>
+</html>
